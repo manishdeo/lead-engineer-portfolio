@@ -1,0 +1,55 @@
+# App-of-Apps pattern: ArgoCD manages itself + platform components
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/maplehub/k8s-platform.git
+    targetRevision: main
+    path: argocd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+# ApplicationSet: auto-discovers tenant values files from tenants/ directory
+# Adding a new file tenants/<name>.yaml auto-creates the ArgoCD Application
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: tenants
+  namespace: argocd
+spec:
+  generators:
+    - git:
+        repoURL: https://github.com/maplehub/k8s-platform.git
+        revision: main
+        files:
+          - path: "tenants/*.yaml"
+  template:
+    metadata:
+      name: "tenant-{{path.basename}}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/maplehub/k8s-platform.git
+        targetRevision: main
+        path: helm-charts/tenant-app
+        helm:
+          valueFiles:
+            - "../../tenants/{{path.basename}}.yaml"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "tenant-{{path.basename}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

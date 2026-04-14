@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🛒 Self-Healing Agent — E-Commerce Test Suite</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a0e1a;color:#e2e8f0;min-height:100vh;padding:1.5rem}
+h1{font-size:1.5rem;text-align:center;margin-bottom:.2rem}
+.sub{text-align:center;color:#64748b;font-size:.8rem;margin-bottom:1rem}
+.wrap{max-width:900px;margin:0 auto}
+
+.controls{display:flex;gap:.6rem;justify-content:center;margin-bottom:1rem}
+button{padding:.45rem 1rem;border-radius:8px;border:none;font-weight:600;cursor:pointer;font-size:.8rem}
+.btn-run{background:#3b82f6;color:#fff}
+.btn-reset{background:#334155;color:#cbd5e1}
+
+/* Step Cards */
+.step{background:#111827;border:1px solid #1e293b;border-radius:10px;padding:.8rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.8rem;transition:.3s;opacity:.4}
+.step.running{opacity:1;border-color:#3b82f6;box-shadow:0 0 12px rgba(59,130,246,.2)}
+.step.done{opacity:.85}
+.step .icon{font-size:1.3rem;width:32px;text-align:center;flex-shrink:0}
+.step .info{flex:1;min-width:0}
+.step .info .title{font-weight:600;font-size:.82rem}
+.step .info .detail{font-size:.7rem;color:#64748b;margin-top:2px;font-family:monospace}
+.step .status{font-size:.7rem;font-weight:600;padding:3px 10px;border-radius:12px;flex-shrink:0}
+.s-wait{background:#1e293b;color:#475569}
+.s-run{background:#1e3a5f;color:#60a5fa;animation:blink 1s infinite}
+.s-pass{background:#14532d;color:#4ade80}
+.s-fail{background:#450a0a;color:#f87171}
+.s-heal{background:#2e1065;color:#c084fc}
+
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* Healing Detail */
+.heal-detail{background:#0f172a;border-left:3px solid #a855f7;margin:.4rem 0 .4rem 2.5rem;padding:.5rem .8rem;border-radius:0 8px 8px 0;font-size:.72rem;display:none}
+.heal-detail.show{display:block;animation:slideIn .3s}
+@keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+.heal-detail .old{color:#f87171;text-decoration:line-through}
+.heal-detail .new{color:#4ade80;font-weight:600}
+.heal-detail .reason{color:#94a3b8;margin-top:3px}
+
+/* Summary */
+.summary{background:#111827;border:1px solid #1e293b;border-radius:10px;padding:1rem;margin-top:1rem;display:none}
+.summary.show{display:block}
+.summary h3{font-size:.9rem;margin-bottom:.6rem}
+.sum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;text-align:center}
+.sum-grid .v{font-size:1.3rem;font-weight:700}
+.sum-grid .l{font-size:.65rem;color:#64748b}
+
+/* Log */
+.log{background:#0a0e1a;border:1px solid #1e293b;border-radius:8px;padding:.6rem;margin-top:.8rem;font-family:'Fira Code',monospace;font-size:.68rem;max-height:180px;overflow-y:auto;display:none}
+.log.show{display:block}
+.log div{padding:1px 0;opacity:0;animation:fadeIn .2s forwards}
+.l-info{color:#38bdf8}.l-warn{color:#fbbf24}.l-ok{color:#4ade80}.l-err{color:#ef4444}.l-heal{color:#c084fc}
+@keyframes fadeIn{to{opacity:1}}
+</style>
+</head>
+<body>
+
+<h1>🛒 E-Commerce Self-Healing Test Suite</h1>
+<p class="sub">Simulating 12 test steps against Amazon.com-like e-commerce · Watch healing in real-time</p>
+
+<div class="wrap">
+  <div class="controls">
+    <button class="btn-run" onclick="run()">▶ Run Test Suite</button>
+    <button class="btn-reset" onclick="reset()">↺ Reset</button>
+  </div>
+
+  <div id="steps"></div>
+
+  <div class="summary" id="summary">
+    <h3>🏁 Test Suite Complete</h3>
+    <div class="sum-grid">
+      <div><div class="v" style="color:#4ade80" id="sPass">0</div><div class="l">PASSED</div></div>
+      <div><div class="v" style="color:#c084fc" id="sHeal">0</div><div class="l">HEALED</div></div>
+      <div><div class="v" style="color:#ef4444" id="sFail">0</div><div class="l">FAILED</div></div>
+      <div><div class="v" style="color:#38bdf8" id="sRate">0%</div><div class="l">SUCCESS RATE</div></div>
+    </div>
+  </div>
+
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+const STEPS = [
+  {name:'Navigate to Homepage',action:'navigate',loc:'https://amazon.com',status:'pass',time:800},
+  {name:'Search for "laptop"',action:'fill',loc:'#search-box',healTo:'#twotabsearchtextbox',status:'healed',conf:.94,reason:'Input field id changed from search-box to twotabsearchtextbox',time:600},
+  {name:'Click Search Button',action:'click',loc:'#nav-search-submit-button',status:'pass',time:400},
+  {name:'Verify Results Loaded',action:'assert_visible',loc:'.s-main-slot .s-result-list',healTo:'.s-main-slot div.s-result-item',status:'healed',conf:.88,reason:'Result list wrapper changed to individual result items',time:500},
+  {name:'Click First Product',action:'click',loc:'.result-card:first-child a',healTo:'div[data-index="2"] a.a-link-normal',status:'healed',conf:.91,reason:'Product card class renamed, matched by data-index attribute',time:700},
+  {name:'Verify Product Title',action:'assert_visible',loc:'#productTitle',status:'pass',time:300},
+  {name:'Select Size Option',action:'click',loc:'#size-select option[value="M"]',status:'fail',reason:'Size selector not present on this product type',time:2000},
+  {name:'Add to Cart',action:'click',loc:'#add-to-cart-btn',healTo:'#add-to-cart-button',status:'healed',conf:.97,reason:'Button id has hyphen difference: btn vs button',time:500},
+  {name:'View Cart',action:'click',loc:'#nav-cart',status:'pass',time:400},
+  {name:'Verify Cart Item',action:'assert_visible',loc:'.cart-item-row',healTo:'.sc-list-item-content',status:'healed',conf:.86,reason:'Cart item container class completely changed in new UI',time:600},
+  {name:'Proceed to Checkout',action:'click',loc:'#proceed-checkout',healTo:'input[name="proceedToRetailCheckout"]',status:'healed',conf:.92,reason:'Checkout button changed from div to input element',time:500},
+  {name:'Verify Login Prompt',action:'assert_visible',loc:'#ap_email',status:'pass',time:300},
+];
+
+const stepsEl = document.getElementById('steps');
+const logEl = document.getElementById('log');
+let running = false;
+
+// Render initial steps
+function renderSteps() {
+  stepsEl.innerHTML = STEPS.map((s, i) => `
+    <div class="step" id="step-${i}">
+      <div class="icon">${s.action==='navigate'?'🌐':s.action==='fill'?'⌨️':s.action==='click'?'👆':'👁️'}</div>
+      <div class="info">
+        <div class="title">${s.name}</div>
+        <div class="detail">${s.action} → ${s.loc}</div>
+      </div>
+      <div class="status s-wait" id="status-${i}">WAITING</div>
+    </div>
+    <div class="heal-detail" id="heal-${i}">
+      <div>Old: <span class="old">${s.loc}</span></div>
+      <div>New: <span class="new">${s.healTo||'—'}</span> ${s.conf?`(${(s.conf*100).toFixed(0)}% confidence)`:''}</div>
+      <div class="reason">💡 ${s.reason||''}</div>
+    </div>
+  `).join('');
+}
+
+function log(msg, cls) {
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = `${new Date().toLocaleTimeString()} │ ${msg}`;
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+async function run() {
+  if (running) return;
+  running = true;
+  reset();
+  logEl.classList.add('show');
+
+  log('🤖 SELF-HEALING AGENT STARTED — 12 steps', 'l-info');
+
+  let pass=0, heal=0, fail=0;
+
+  for (let i = 0; i < STEPS.length; i++) {
+    const s = STEPS[i];
+    const stepEl = document.getElementById(`step-${i}`);
+    const statusEl = document.getElementById(`status-${i}`);
+    const healEl = document.getElementById(`heal-${i}`);
+
+    stepEl.classList.add('running');
+    stepEl.style.opacity = '1';
+    statusEl.className = 'status s-run';
+    statusEl.textContent = 'RUNNING';
+    log(`Step ${i+1}: ${s.action} → ${s.loc}`, 'l-info');
+
+    await sleep(s.time);
+
+    if (s.status === 'pass') {
+      statusEl.className = 'status s-pass';
+      statusEl.textContent = 'PASSED';
+      log(`✅ Passed: ${s.name}`, 'l-ok');
+      pass++;
+    } else if (s.status === 'fail') {
+      statusEl.className = 'status s-fail';
+      statusEl.textContent = 'FAILED';
+      log(`❌ Failed: ${s.name}`, 'l-err');
+      log(`   Reason: ${s.reason}`, 'l-warn');
+      healEl.classList.add('show');
+      fail++;
+    } else if (s.status === 'healed') {
+      statusEl.className = 'status s-fail';
+      statusEl.textContent = 'BROKEN';
+      log(`❌ Element not found: ${s.loc}`, 'l-err');
+      log(`🔄 Initiating self-healing...`, 'l-warn');
+      await sleep(400);
+      log(`🧠 LLM analyzing DOM + screenshot...`, 'l-heal');
+      await sleep(600);
+      log(`🔧 Healed: ${s.loc} → ${s.healTo} (${(s.conf*100).toFixed(0)}%)`, 'l-heal');
+      statusEl.className = 'status s-heal';
+      statusEl.textContent = 'HEALED';
+      healEl.classList.add('show');
+      heal++;
+    }
+
+    stepEl.classList.remove('running');
+    stepEl.classList.add('done');
+    await sleep(200);
+  }
+
+  // Summary
+  const sum = document.getElementById('summary');
+  sum.classList.add('show');
+  document.getElementById('sPass').textContent = pass;
+  document.getElementById('sHeal').textContent = heal;
+  document.getElementById('sFail').textContent = fail;
+  document.getElementById('sRate').textContent = Math.round((pass+heal)/STEPS.length*100)+'%';
+  log(`🏁 COMPLETE: ${pass} passed, ${heal} healed, ${fail} failed — ${Math.round((pass+heal)/STEPS.length*100)}% success`, 'l-ok');
+  running = false;
+}
+
+function reset() {
+  running = false;
+  renderSteps();
+  logEl.innerHTML = '';
+  logEl.classList.remove('show');
+  document.getElementById('summary').classList.remove('show');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+renderSteps();
+</script>
+</body>
+</html>

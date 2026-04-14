@@ -1,0 +1,28 @@
+version: '3.9'
+
+services:
+  redis-1:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --port 6379 --appendonly yes
+
+  redis-2:
+    image: redis:7.2-alpine
+    ports:
+      - "6380:6379"
+    command: redis-server --port 6379 --appendonly yes
+
+  redis-3:
+    image: redis:7.2-alpine
+    ports:
+      - "6381:6379"
+    command: redis-server --port 6379 --appendonly yes
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on: [redis-1, redis-2, redis-3]
+    environment:
+      REDIS_NODES: redis-1:6379,redis-2:6379,redis-3:6379

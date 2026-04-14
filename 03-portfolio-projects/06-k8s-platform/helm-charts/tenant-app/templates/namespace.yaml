@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-{{ .Values.tenant.name }}
+  labels:
+    tenant: {{ .Values.tenant.name }}
+    tier: {{ .Values.tenant.tier }}
+    istio-injection: {{ if .Values.istio.enabled }}"enabled"{{ else }}"disabled"{{ end }}
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted

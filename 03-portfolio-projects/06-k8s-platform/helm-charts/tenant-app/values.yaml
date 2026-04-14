@@ -1,0 +1,52 @@
+tenant:
+  name: ""
+  tier: small  # small | medium | large
+
+app:
+  image: nginx:1.25-alpine
+  replicas: 2
+  port: 8080
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Tiered resource quotas
+quotas:
+  small:
+    cpu: "4"
+    memory: 8Gi
+    pods: "20"
+  medium:
+    cpu: "8"
+    memory: 16Gi
+    pods: "50"
+  large:
+    cpu: "16"
+    memory: 32Gi
+    pods: "100"
+
+# LimitRange defaults — so devs don't need to specify
+limitRange:
+  defaultCpu: 200m
+  defaultMemory: 256Mi
+  maxCpu: "2"
+  maxMemory: 2Gi
+
+networkPolicy:
+  allowIngress: true
+  allowEgress: true
+  allowDNS: true
+
+istio:
+  enabled: true
+  mtls: STRICT
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPU: 70

@@ -1,0 +1,38 @@
+sequenceDiagram
+    participant Client as Web/Mobile Client
+    participant Gateway as API Gateway
+    participant Auth as Auth Service
+    participant Order as Order Service
+    participant Inventory as Inventory Service
+    participant Payment as Payment Service
+
+    Client->>Gateway: POST /api/v1/orders
+    Gateway->>Auth: Validate JWT Token
+    Auth-->>Gateway: Token Valid (User ID: 123)
+
+    Gateway->>Order: Create Order Request
+
+    rect rgb(240, 248, 255)
+        Note over Order,Inventory: Saga Pattern Initiation
+        Order->>Inventory: Reserve Items
+        alt Inventory Available
+            Inventory-->>Order: Reservation Success
+            Order->>Payment: Process Payment
+
+            alt Payment Success
+                Payment-->>Order: Payment Confirmed
+                Order-->>Gateway: Order Created (HTTP 201)
+                Gateway-->>Client: Success Response
+            else Payment Failed
+                Payment-->>Order: Payment Error
+                Order->>Inventory: Release Items (Compensation)
+                Order-->>Gateway: Payment Failed (HTTP 402)
+                Gateway-->>Client: Error Response
+            end
+
+        else Inventory Unavailable
+            Inventory-->>Order: Out of Stock
+            Order-->>Gateway: Inventory Error (HTTP 409)
+            Gateway-->>Client: Error Response
+        end
+    end

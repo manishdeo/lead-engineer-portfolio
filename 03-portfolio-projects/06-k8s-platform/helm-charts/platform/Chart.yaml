@@ -1,0 +1,13 @@
+apiVersion: v2
+name: platform
+description: Platform-level components — Istio, monitoring, ArgoCD, Gatekeeper
+version: 1.0.0
+dependencies:
+  - name: kube-prometheus-stack
+    version: "55.0.0"
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: monitoring.enabled
+  - name: argo-cd
+    version: "5.51.0"
+    repository: https://argoproj.github.io/argo-helm
+    condition: argocd.enabled

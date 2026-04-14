@@ -1,0 +1,33 @@
+{
+  "name": "Login Flow — Self-Healing Demo",
+  "description": "Demonstrates self-healing when login button locator breaks",
+  "steps": [
+    {
+      "action": "navigate",
+      "locator": "https://practicetestautomation.com/practice-test-login/",
+      "intent": "Navigate to the login page"
+    },
+    {
+      "action": "fill",
+      "locator": "#username",
+      "value": "student",
+      "intent": "Enter username into the username field"
+    },
+    {
+      "action": "fill",
+      "locator": "#password",
+      "value": "Password123",
+      "intent": "Enter password into the password field"
+    },
+    {
+      "action": "click",
+      "locator": "#login-btn",
+      "intent": "Click the login/submit button to submit credentials"
+    },
+    {
+      "action": "assert_visible",
+      "locator": ".post-title",
+      "intent": "Verify the dashboard page loaded with a post title visible"
+    }
+  ]
+}

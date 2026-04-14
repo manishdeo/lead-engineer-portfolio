@@ -1,0 +1,21 @@
+tenant:
+  name: alpha
+  tier: medium
+
+app:
+  image: ghcr.io/maplehub/sample-app:1.2.0
+  replicas: 3
+  port: 8080
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 15
+  targetCPU: 65

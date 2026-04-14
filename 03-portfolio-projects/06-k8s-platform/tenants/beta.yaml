@@ -1,0 +1,14 @@
+tenant:
+  name: beta
+  tier: small
+
+app:
+  image: ghcr.io/maplehub/sample-app:1.1.0
+  replicas: 2
+  port: 8080
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPU: 75

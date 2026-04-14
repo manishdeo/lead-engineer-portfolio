@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecommerce-config
+data:
+  PRODUCT_DB_URL: "jdbc:postgresql://postgres:5432/product_db"
+  ORDER_DB_URL: "jdbc:postgresql://postgres:5432/order_db"
+  PAYMENT_DB_URL: "jdbc:postgresql://postgres:5432/payment_db"
+  INVENTORY_DB_URL: "jdbc:postgresql://postgres:5432/inventory_db"
+  USER_DB_URL: "jdbc:postgresql://postgres:5432/user_db"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  REDIS_HOST: "redis"
+  ZIPKIN_ENDPOINT: "http://zipkin:9411/api/v2/spans"

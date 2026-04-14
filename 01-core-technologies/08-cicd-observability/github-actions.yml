@@ -1,0 +1,54 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v3
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Unit & Integration Tests
+      run: mvn clean verify
+
+    - name: SonarQube Security Scan
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: mvn sonar:sonar
+
+    - name: Docker Build & Push
+      if: github.ref == 'refs/heads/main'
+      uses: docker/build-push-action@v4
+      with:
+        push: true
+        tags: myregistry/myapp:${{ github.sha }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Update K8s Manifest Image Tag
+      run: |
+        sed -i "s|image: .*|image: myregistry/myapp:${{ github.sha }}|g" k8s/deployment.yaml
+        
+    - name: Deploy to K8s (GitOps Approach - usually ArgoCD would pick this up)
+      run: |
+        # In a push-based deployment:
+        # echo "${{ secrets.KUBECONFIG }}" > kubeconfig
+        # export KUBECONFIG=kubeconfig
+        # kubectl apply -f k8s/
+        echo "Updating manifests for ArgoCD to sync..."

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🤖 Self-Healing Agent — Visualization Hub</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem}
+h1{font-size:1.8rem;margin-bottom:.5rem}
+.subtitle{color:#94a3b8;margin-bottom:2rem}
+
+/* Hub Cards */
+.hub{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.2rem;max-width:960px;width:100%;margin-bottom:2rem}
+.hub-card{background:#111827;border:2px solid #1e293b;border-radius:16px;padding:1.5rem;text-decoration:none;color:#e2e8f0;transition:.3s;cursor:pointer}
+.hub-card:hover{border-color:#3b82f6;transform:translateY(-4px);box-shadow:0 8px 24px rgba(59,130,246,.15)}
+.hub-card .icon{font-size:2.5rem;margin-bottom:.8rem}
+.hub-card .title{font-size:1.1rem;font-weight:700;margin-bottom:.4rem}
+.hub-card .desc{font-size:.8rem;color:#94a3b8;line-height:1.4}
+.hub-card .tags{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.8rem}
+.hub-card .tag{background:#1e293b;padding:2px 8px;border-radius:10px;font-size:.65rem;color:#64748b}
+
+/* Original Pipeline Demo (kept inline) */
+.pipeline{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:2rem}
+.stage{width:180px;min-height:160px;border-radius:16px;padding:1.2rem;text-align:center;opacity:.3;transform:scale(.9);transition:all .6s cubic-bezier(.4,0,.2,1);position:relative}
+.stage.active{opacity:1;transform:scale(1)}.stage.done{opacity:.7;transform:scale(.95)}
+.stage .ic{font-size:2.5rem;margin-bottom:.5rem}.stage .label{font-weight:700;font-size:.9rem;margin-bottom:.3rem}.stage .detail{font-size:.75rem;color:#94a3b8}
+.arrow{font-size:1.5rem;color:#475569;transition:color .3s}.arrow.active{color:#38bdf8}
+.s-execute{background:linear-gradient(135deg,#1e3a5f,#1e293b);border:2px solid #3b82f6}
+.s-fail{background:linear-gradient(135deg,#4c1d1d,#1e293b);border:2px solid #ef4444}
+.s-think{background:linear-gradient(135deg,#3b1d5e,#1e293b);border:2px solid #a855f7}
+.s-fix{background:linear-gradient(135deg,#1d4e3e,#1e293b);border:2px solid #22c55e}
+.s-valid{background:linear-gradient(135deg,#4e4e1d,#1e293b);border:2px solid #eab308}
+.s-learn{background:linear-gradient(135deg,#1d3e4e,#1e293b);border:2px solid #06b6d4}
+.pulse{animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,.4)}50%{box-shadow:0 0 20px 10px rgba(168,85,247,.1)}}
+
+.log{width:100%;max-width:700px;background:#1e293b;border-radius:12px;padding:1rem;font-family:'Fira Code',monospace;font-size:.8rem;max-height:250px;overflow-y:auto}
+.log-line{padding:2px 0;opacity:0;animation:fadeIn .3s forwards}
+.log-line.info{color:#38bdf8}.log-line.warn{color:#f59e0b}.log-line.success{color:#22c55e}.log-line.error{color:#ef4444}
+@keyframes fadeIn{to{opacity:1}}
+
+.controls{margin:1.5rem 0;display:flex;gap:1rem}
+button{padding:.6rem 1.5rem;border-radius:8px;border:none;font-weight:600;cursor:pointer;font-size:.9rem;transition:transform .1s}
+button:active{transform:scale(.95)}
+.btn-start{background:#3b82f6;color:white}.btn-reset{background:#475569;color:white}
+
+hr{border:none;border-top:1px solid #1e293b;width:100%;max-width:700px;margin:1.5rem 0}
+h2{font-size:1.2rem;margin-bottom:1rem}
+</style>
+</head>
+<body>
+
+<h1>🤖 Self-Healing Agent</h1>
+<p class="subtitle">AI-powered test automation that detects, reasons, and fixes broken locators</p>
+
+<!-- Hub Navigation -->
+<div class="hub">
+  <a class="hub-card" href="visualization-dashboard.html">
+    <div class="icon">🧪</div>
+    <div class="title">Multi-Framework Dashboard</div>
+    <div class="desc">25 e-commerce test cases across 5 frameworks with JUnit XML export, framework comparison matrix, and pass/heal/fail metrics.</div>
+    <div class="tags"><span class="tag">JUnit 5</span><span class="tag">TestNG</span><span class="tag">Pytest</span><span class="tag">Cypress</span><span class="tag">Playwright</span></div>
+  </a>
+  <a class="hub-card" href="visualization-ecommerce.html">
+    <div class="icon">🛒</div>
+    <div class="title">E-Commerce Test Suite</div>
+    <div class="desc">12-step Amazon.com-like checkout flow with live healing animation. Watch the agent detect failures and fix locators in real-time.</div>
+    <div class="tags"><span class="tag">Live Animation</span><span class="tag">DOM Healing</span><span class="tag">Confidence Scores</span></div>
+  </a>
+</div>
+
+<hr>
+<h2>⚡ Quick Demo — Core Healing Flow</h2>
+
+<!-- Original Pipeline -->
+<div class="pipeline">
+  <div class="stage s-execute" id="s0"><div class="ic">▶️</div><div class="label">EXECUTE</div><div class="detail">click #login-btn</div></div>
+  <div class="arrow" id="a0">→</div>
+  <div class="stage s-fail" id="s1"><div class="ic">❌</div><div class="label">FAILURE</div><div class="detail">Element not found</div></div>
+  <div class="arrow" id="a1">→</div>
+  <div class="stage s-think" id="s2"><div class="ic">🧠</div><div class="label">AI REASONING</div><div class="detail">Analyzing DOM + screenshot...</div></div>
+  <div class="arrow" id="a2">→</div>
+  <div class="stage s-fix" id="s3"><div class="ic">🔧</div><div class="label">HEALED</div><div class="detail">#submit (92% conf)</div></div>
+  <div class="arrow" id="a3">→</div>
+  <div class="stage s-valid" id="s4"><div class="ic">✅</div><div class="label">VALIDATED</div><div class="detail">Dashboard loaded</div></div>
+  <div class="arrow" id="a4">→</div>
+  <div class="stage s-learn" id="s5"><div class="ic">📚</div><div class="label">LEARNED</div><div class="detail">Stored for next run</div></div>
+</div>
+
+<div class="controls">
+  <button class="btn-start" onclick="startDemo()">▶ Run Demo</button>
+  <button class="btn-reset" onclick="resetDemo()">↺ Reset</button>
+</div>
+
+<div class="log" id="log"></div>
+
+<script>
+const stages=[
+  {id:'s0',delay:0,logs:[{t:'info',m:'▶ Executing: click → #login-btn'}]},
+  {id:'s1',delay:1200,logs:[{t:'error',m:'❌ Timeout: Element #login-btn not found'},{t:'warn',m:'🔄 Initiating self-healing...'}]},
+  {id:'s2',delay:2000,logs:[{t:'info',m:'📸 Captured DOM (4521 chars) + screenshot'},{t:'info',m:'🧩 Built prompt with 2 content parts'},{t:'info',m:'🧠 Calling GPT-4o...'}]},
+  {id:'s3',delay:3000,logs:[{t:'success',m:'🧠 LLM: new_locator="#submit" confidence=0.92'},{t:'info',m:'   Reasoning: Button with id="submit" and text "Submit" matches login intent'},{t:'success',m:'🔧 Healed via [llm_css]: #submit'}]},
+  {id:'s4',delay:1500,logs:[{t:'success',m:'✅ URL changed to /logged-in-successfully/'},{t:'success',m:'✅ Validation passed'}]},
+  {id:'s5',delay:1200,logs:[{t:'info',m:'📚 Stored: #login-btn → #submit (conf: 0.92)'},{t:'success',m:'🎉 SELF-HEALING COMPLETE — Test continues'}]},
+];
+let running=false;
+async function startDemo(){
+  if(running)return;running=true;resetDemo();
+  const log=document.getElementById('log');
+  for(let i=0;i<stages.length;i++){
+    const s=stages[i];await sleep(s.delay);
+    if(i>0){document.getElementById(stages[i-1].id).classList.remove('active','pulse');document.getElementById(stages[i-1].id).classList.add('done')}
+    const el=document.getElementById(s.id);el.classList.add('active');if(s.id==='s2')el.classList.add('pulse');
+    if(i>0)document.getElementById('a'+(i-1)).classList.add('active');
+    for(const l of s.logs){await sleep(400);const line=document.createElement('div');line.className=`log-line ${l.t}`;line.textContent=l.m;log.appendChild(line);log.scrollTop=log.scrollHeight}
+  }
+  running=false;
+}
+function resetDemo(){for(let i=0;i<6;i++){document.getElementById('s'+i).classList.remove('active','done','pulse');if(i<5)document.getElementById('a'+i).classList.remove('active')}document.getElementById('log').innerHTML=''}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+</script>
+</body>
+</html>

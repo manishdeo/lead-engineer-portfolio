@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-backend
+  labels:
+    app: analytics-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: analytics-backend
+  template:
+    metadata:
+      labels:
+        app: analytics-backend
+    spec:
+      containers:
+        - name: backend
+          image: maplehub/analytics-backend:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                configMapKeyRef:
+                  name: analytics-config
+                  key: kafka-bootstrap-servers
+            - name: CLICKHOUSE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: analytics-config
+                  key: clickhouse-url
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-backend
+spec:
+  selector:
+    app: analytics-backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-frontend
+  labels:
+    app: analytics-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: analytics-frontend
+  template:
+    metadata:
+      labels:
+        app: analytics-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: maplehub/analytics-frontend:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: http://analytics-backend:8080
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-frontend
+spec:
+  type: LoadBalancer
+  selector:
+    app: analytics-frontend
+  ports:
+    - port: 80
+      targetPort: 3000
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: analytics-config
+data:
+  kafka-bootstrap-servers: kafka:9092
+  clickhouse-url: jdbc:clickhouse://clickhouse:8123/analytics

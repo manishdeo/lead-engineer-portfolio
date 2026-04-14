@@ -1,0 +1,34 @@
+# Example Spring Boot configuration for Resilience4j Circuit Breaker
+# This file would typically be located in `src/main/resources/application.yml`
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      # This name must match the name used in the @CircuitBreaker annotation
+      paymentService:
+        # The failure rate threshold in percentage. If 50% of the last 10 calls failed, open the circuit.
+        failure-rate-threshold: 50
+        
+        # The number of permitted calls when the circuit is half-open.
+        permitted-number-of-calls-in-half-open-state: 5
+        
+        # The minimum number of calls required (per sliding window period) before the circuit breaker can calculate the error rate.
+        minimum-number-of-calls: 10
+        
+        # The size of the sliding window used to record the outcome of calls.
+        # Can be COUNT_BASED or TIME_BASED.
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10 # Records the last 10 calls
+        
+        # The time that the circuit breaker should wait before transitioning from open to half-open.
+        wait-duration-in-open-state: 10s
+        
+        # Configure which exceptions should be recorded as a failure.
+        record-exceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - java.util.concurrent.TimeoutException
+          - java.io.IOException
+          
+        # Configure exceptions that should be ignored and not count as a failure.
+        ignore-exceptions:
+          - com.example.exceptions.BusinessRuleException # e.g., an invalid input shouldn't open the circuit

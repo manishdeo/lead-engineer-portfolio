@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧪 Self-Healing Agent — Multi-Framework Test Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a0e1a;color:#e2e8f0;min-height:100vh;padding:1.5rem}
+h1{font-size:1.6rem;text-align:center;margin-bottom:.3rem}
+.sub{text-align:center;color:#64748b;font-size:.85rem;margin-bottom:1.5rem}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;max-width:1200px;margin:0 auto}
+.card{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:1rem;overflow:hidden}
+.card h2{font-size:.95rem;color:#94a3b8;margin-bottom:.8rem;display:flex;align-items:center;gap:.5rem}
+.full{grid-column:1/-1}
+
+/* Framework Pills */
+.fw-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.8rem}
+.fw-pill{padding:.35rem .8rem;border-radius:20px;font-size:.75rem;font-weight:600;cursor:pointer;border:2px solid transparent;transition:.2s}
+.fw-pill.active{transform:scale(1.05)}
+.fw-junit{background:#1b3a2d;color:#4ade80;border-color:#22c55e}
+.fw-testng{background:#1b2a3a;color:#60a5fa;border-color:#3b82f6}
+.fw-pytest{background:#3a2a1b;color:#fbbf24;border-color:#f59e0b}
+.fw-cypress{background:#1b3a3a;color:#2dd4bf;border-color:#14b8a6}
+.fw-playwright{background:#2a1b3a;color:#c084fc;border-color:#a855f7}
+
+/* Metrics */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem}
+.metric{background:#0f172a;border-radius:8px;padding:.7rem;text-align:center}
+.metric .val{font-size:1.5rem;font-weight:700}
+.metric .lbl{font-size:.7rem;color:#64748b;margin-top:.2rem}
+.m-pass .val{color:#4ade80}
+.m-fail .val{color:#ef4444}
+.m-heal .val{color:#a855f7}
+.m-time .val{color:#38bdf8}
+
+/* Test Table */
+.tbl{width:100%;border-collapse:collapse;font-size:.78rem}
+.tbl th{text-align:left;padding:.5rem;color:#64748b;border-bottom:1px solid #1e293b;font-weight:600}
+.tbl td{padding:.45rem .5rem;border-bottom:1px solid #111827}
+.tbl tr:hover{background:#1e293b}
+.badge{padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:600}
+.b-pass{background:#14532d;color:#4ade80}
+.b-fail{background:#450a0a;color:#f87171}
+.b-heal{background:#2e1065;color:#c084fc}
+.b-skip{background:#1e293b;color:#64748b}
+.conf{font-size:.7rem;color:#94a3b8}
+
+/* Bar Chart */
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:.5rem}
+.bar-group{display:flex;flex-direction:column;align-items:center;flex:1}
+.bar{width:100%;border-radius:4px 4px 0 0;transition:height .5s;min-height:2px}
+.bar-label{font-size:.6rem;color:#64748b;margin-top:4px;text-align:center}
+
+/* Progress */
+.prog-bar{height:6px;background:#1e293b;border-radius:3px;overflow:hidden;margin-top:.3rem}
+.prog-fill{height:100%;border-radius:3px;transition:width 1s}
+
+/* Controls */
+.controls{display:flex;gap:.8rem;justify-content:center;margin:1rem 0}
+button{padding:.5rem 1.2rem;border-radius:8px;border:none;font-weight:600;cursor:pointer;font-size:.8rem;transition:.15s}
+button:active{transform:scale(.95)}
+.btn-run{background:#3b82f6;color:#fff}
+.btn-reset{background:#334155;color:#cbd5e1}
+.btn-export{background:#065f46;color:#6ee7b7}
+
+/* JUnit XML */
+.xml-box{background:#0a0e1a;border:1px solid #1e293b;border-radius:8px;padding:.8rem;font-family:'Fira Code',monospace;font-size:.7rem;max-height:200px;overflow-y:auto;white-space:pre;color:#94a3b8;line-height:1.5}
+.xml-tag{color:#60a5fa}.xml-attr{color:#fbbf24}.xml-val{color:#4ade80}.xml-err{color:#f87171}
+
+/* Comparison Matrix */
+.matrix{width:100%;border-collapse:collapse;font-size:.75rem}
+.matrix th,.matrix td{padding:.5rem;text-align:center;border:1px solid #1e293b}
+.matrix th{background:#0f172a;color:#94a3b8}
+.matrix td{background:#111827}
+.chk{color:#4ade80}.cross{color:#ef4444}.partial{color:#fbbf24}
+
+@media(max-width:768px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<h1>🧪 Self-Healing Agent — Multi-Framework Test Dashboard</h1>
+<p class="sub">E-Commerce Test Suite (Amazon.com-like) · JUnit / TestNG / Pytest / Cypress / Playwright</p>
+
+<div class="controls">
+  <button class="btn-run" onclick="runAll()">▶ Run All Tests</button>
+  <button class="btn-reset" onclick="resetAll()">↺ Reset</button>
+  <button class="btn-export" onclick="showXml()">📄 Export JUnit XML</button>
+</div>
+
+<!-- Framework Selector -->
+<div style="max-width:1200px;margin:0 auto .8rem">
+  <div class="fw-row" id="fwRow"></div>
+</div>
+
+<div class="grid">
+
+  <!-- Metrics -->
+  <div class="card full">
+    <h2>📊 Test Execution Summary</h2>
+    <div class="metrics">
+      <div class="metric m-pass"><div class="val" id="mPass">0</div><div class="lbl">PASSED</div></div>
+      <div class="metric m-fail"><div class="val" id="mFail">0</div><div class="lbl">FAILED</div></div>
+      <div class="metric m-heal"><div class="val" id="mHeal">0</div><div class="lbl">HEALED</div></div>
+      <div class="metric m-time"><div class="val" id="mTime">0s</div><div class="lbl">TOTAL TIME</div></div>
+    </div>
+    <div class="prog-bar" style="margin-top:.8rem"><div class="prog-fill" id="progFill" style="width:0%;background:linear-gradient(90deg,#4ade80,#a855f7,#ef4444)"></div></div>
+  </div>
+
+  <!-- Test Results Table -->
+  <div class="card full">
+    <h2>🧾 Test Results — <span id="fwName">All Frameworks</span></h2>
+    <div style="max-height:320px;overflow-y:auto">
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Test Case</th><th>Framework</th><th>Status</th><th>Locator</th><th>Healed To</th><th>Confidence</th><th>Time</th></tr></thead>
+        <tbody id="tblBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Framework Comparison Bar Chart -->
+  <div class="card">
+    <h2>📊 Pass / Heal / Fail by Framework</h2>
+    <div class="bar-chart" id="barChart"></div>
+  </div>
+
+  <!-- Framework Support Matrix -->
+  <div class="card">
+    <h2>🔧 Framework Compatibility Matrix</h2>
+    <table class="matrix">
+      <thead><tr><th>Feature</th><th>JUnit</th><th>TestNG</th><th>Pytest</th><th>Cypress</th><th>Playwright</th></tr></thead>
+      <tbody>
+        <tr><td>CSS Selectors</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td></tr>
+        <tr><td>XPath</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td><td class="partial">⚠</td><td class="chk">✔</td></tr>
+        <tr><td>Screenshot Capture</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td></tr>
+        <tr><td>DOM Snapshot</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td></tr>
+        <tr><td>Video Recording</td><td class="cross">✘</td><td class="cross">✘</td><td class="cross">✘</td><td class="chk">✔</td><td class="chk">✔</td></tr>
+        <tr><td>Auto-Wait</td><td class="cross">✘</td><td class="cross">✘</td><td class="cross">✘</td><td class="chk">✔</td><td class="chk">✔</td></tr>
+        <tr><td>Multi-Browser</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td><td class="partial">⚠</td><td class="chk">✔</td></tr>
+        <tr><td>Parallel Exec</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td></tr>
+        <tr><td>Self-Heal Support</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td><td class="chk">✔</td></tr>
+        <tr><td>Mobile Testing</td><td class="partial">⚠</td><td class="partial">⚠</td><td class="partial">⚠</td><td class="partial">⚠</td><td class="chk">✔</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- JUnit XML Export -->
+  <div class="card full" id="xmlCard" style="display:none">
+    <h2>📄 JUnit XML Report</h2>
+    <div class="xml-box" id="xmlBox"></div>
+  </div>
+
+</div>
+
+<script>
+const FRAMEWORKS = [
+  {id:'junit',name:'JUnit 5',cls:'fw-junit'},
+  {id:'testng',name:'TestNG',cls:'fw-testng'},
+  {id:'pytest',name:'Pytest',cls:'fw-pytest'},
+  {id:'cypress',name:'Cypress',cls:'fw-cypress'},
+  {id:'playwright',name:'Playwright',cls:'fw-playwright'},
+];
+
+const TESTS = [
+  // Amazon.com-like e-commerce test scenarios
+  {name:'Homepage — Search bar visible',action:'assert_visible',loc:'#twotabsearchtextbox',fw:'junit',status:'pass',time:0.3},
+  {name:'Homepage — Search product',action:'fill',loc:'#search-input',healTo:'#twotabsearchtextbox',fw:'junit',status:'healed',conf:0.94,time:1.8},
+  {name:'Search — Click search button',action:'click',loc:'#nav-search-submit-btn',fw:'junit',status:'pass',time:0.5},
+  {name:'Search — Results grid loads',action:'assert_visible',loc:'.s-main-slot',fw:'junit',status:'pass',time:0.8},
+  {name:'PDP — Click first product',action:'click',loc:'.s-result-item:first a',healTo:'div[data-index="0"] a.a-link-normal',fw:'testng',status:'healed',conf:0.89,time:2.1},
+  {name:'PDP — Product title visible',action:'assert_visible',loc:'#productTitle',fw:'testng',status:'pass',time:0.4},
+  {name:'PDP — Add to cart',action:'click',loc:'#add-to-cart-btn',healTo:'#add-to-cart-button',fw:'testng',status:'healed',conf:0.96,time:1.5},
+  {name:'Cart — Cart count updated',action:'assert_visible',loc:'#nav-cart-count',fw:'testng',status:'pass',time:0.6},
+  {name:'Cart — View cart page',action:'click',loc:'#nav-cart',fw:'pytest',status:'pass',time:0.4},
+  {name:'Cart — Item in cart list',action:'assert_visible',loc:'.sc-list-item',healTo:'.sc-item-content-group',fw:'pytest',status:'healed',conf:0.87,time:2.3},
+  {name:'Cart — Proceed to checkout',action:'click',loc:'#checkout-btn',healTo:'input[name="proceedToRetailCheckout"]',fw:'pytest',status:'healed',conf:0.91,time:1.9},
+  {name:'Auth — Login form visible',action:'assert_visible',loc:'#ap_email',fw:'pytest',status:'pass',time:0.5},
+  {name:'Auth — Enter email',action:'fill',loc:'#email-input',healTo:'#ap_email',fw:'cypress',status:'healed',conf:0.95,time:1.6},
+  {name:'Auth — Enter password',action:'fill',loc:'#ap_password',fw:'cypress',status:'pass',time:0.3},
+  {name:'Auth — Click sign-in',action:'click',loc:'#signInSubmit',fw:'cypress',status:'pass',time:0.7},
+  {name:'Auth — MFA challenge',action:'assert_visible',loc:'#auth-mfa-otpcode',fw:'cypress',status:'fail',time:3.0},
+  {name:'Checkout — Address selection',action:'click',loc:'.address-select-btn',healTo:'#address-book-entry-0 .ship-to-this-address',fw:'playwright',status:'healed',conf:0.88,time:2.0},
+  {name:'Checkout — Payment method',action:'assert_visible',loc:'#payment-method',healTo:'#pp-lUQ95H-36',fw:'playwright',status:'healed',conf:0.82,time:2.4},
+  {name:'Checkout — Place order',action:'click',loc:'#place-order-btn',healTo:'#submitOrderButtonId input',fw:'playwright',status:'healed',conf:0.90,time:1.7},
+  {name:'Checkout — Order confirmation',action:'assert_visible',loc:'.order-confirm-msg',fw:'playwright',status:'fail',time:3.0},
+  {name:'Nav — Account dropdown',action:'click',loc:'#nav-link-accountList',fw:'junit',status:'pass',time:0.4},
+  {name:'Nav — Orders page',action:'click',loc:'#nav_prefetch_yourorders',healTo:'#nav-orders',fw:'testng',status:'healed',conf:0.93,time:1.4},
+  {name:'Orders — Filter by date',action:'click',loc:'#time-filter-dropdown',fw:'pytest',status:'pass',time:0.5},
+  {name:'Orders — Order details link',action:'click',loc:'.order-details-link',fw:'cypress',status:'pass',time:0.6},
+  {name:'Footer — Back to top',action:'click',loc:'#navBackToTop',fw:'playwright',status:'pass',time:0.3},
+];
+
+let activeFilter = 'all';
+let running = false;
+let results = [];
+
+// Init framework pills
+const fwRow = document.getElementById('fwRow');
+const allPill = document.createElement('div');
+allPill.className = 'fw-pill active';
+allPill.style.cssText = 'background:#1e293b;color:#e2e8f0;border-color:#475569';
+allPill.textContent = 'All (25)';
+allPill.onclick = () => filterFw('all');
+fwRow.appendChild(allPill);
+
+FRAMEWORKS.forEach(f => {
+  const count = TESTS.filter(t => t.fw === f.id).length;
+  const pill = document.createElement('div');
+  pill.className = `fw-pill ${f.cls}`;
+  pill.id = `pill-${f.id}`;
+  pill.textContent = `${f.name} (${count})`;
+  pill.onclick = () => filterFw(f.id);
+  fwRow.appendChild(pill);
+});
+
+function filterFw(id) {
+  activeFilter = id;
+  document.querySelectorAll('.fw-pill').forEach(p => p.classList.remove('active'));
+  if (id === 'all') {
+    fwRow.children[0].classList.add('active');
+    document.getElementById('fwName').textContent = 'All Frameworks';
+  } else {
+    document.getElementById(`pill-${id}`).classList.add('active');
+    document.getElementById('fwName').textContent = FRAMEWORKS.find(f=>f.id===id).name;
+  }
+  renderTable();
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tblBody');
+  const filtered = activeFilter === 'all' ? results : results.filter(r => r.fw === activeFilter);
+  tbody.innerHTML = filtered.map((r, i) => `<tr>
+    <td>${i+1}</td>
+    <td>${r.name}</td>
+    <td><span class="fw-pill ${FRAMEWORKS.find(f=>f.id===r.fw)?.cls}" style="font-size:.65rem;padding:2px 6px">${r.fw}</span></td>
+    <td><span class="badge ${r.status==='pass'?'b-pass':r.status==='fail'?'b-fail':r.status==='healed'?'b-heal':'b-skip'}">${r.status.toUpperCase()}</span></td>
+    <td style="font-family:monospace;font-size:.7rem">${r.loc}</td>
+    <td style="font-family:monospace;font-size:.7rem;color:#a855f7">${r.healTo||'—'}</td>
+    <td>${r.conf?`<span class="conf">${(r.conf*100).toFixed(0)}%</span>`:'—'}</td>
+    <td>${r.time.toFixed(1)}s</td>
+  </tr>`).join('');
+}
+
+function updateMetrics() {
+  const pass = results.filter(r=>r.status==='pass').length;
+  const fail = results.filter(r=>r.status==='fail').length;
+  const heal = results.filter(r=>r.status==='healed').length;
+  const time = results.reduce((s,r)=>s+r.time,0);
+  document.getElementById('mPass').textContent = pass;
+  document.getElementById('mFail').textContent = fail;
+  document.getElementById('mHeal').textContent = heal;
+  document.getElementById('mTime').textContent = time.toFixed(1)+'s';
+  document.getElementById('progFill').style.width = (results.length/TESTS.length*100)+'%';
+}
+
+function renderBars() {
+  const chart = document.getElementById('barChart');
+  chart.innerHTML = '';
+  FRAMEWORKS.forEach(f => {
+    const tests = results.filter(r=>r.fw===f.id);
+    const p = tests.filter(r=>r.status==='pass').length;
+    const h = tests.filter(r=>r.status==='healed').length;
+    const fl = tests.filter(r=>r.status==='fail').length;
+    const max = Math.max(p+h+fl, 1);
+    const grp = document.createElement('div');
+    grp.className = 'bar-group';
+    grp.innerHTML = `
+      <div style="display:flex;flex-direction:column;width:100%;gap:2px;justify-content:flex-end;height:100%">
+        <div class="bar" style="height:${fl/max*100}%;background:#ef4444"></div>
+        <div class="bar" style="height:${h/max*100}%;background:#a855f7"></div>
+        <div class="bar" style="height:${p/max*100}%;background:#4ade80"></div>
+      </div>
+      <div class="bar-label">${f.name.split(' ')[0]}<br><small>${p}/${h}/${fl}</small></div>`;
+    chart.appendChild(grp);
+  });
+}
+
+async function runAll() {
+  if (running) return;
+  running = true;
+  results = [];
+  document.getElementById('xmlCard').style.display = 'none';
+  renderTable(); updateMetrics(); renderBars();
+
+  for (const t of TESTS) {
+    await new Promise(r => setTimeout(r, 80));
+    results.push({...t});
+    renderTable(); updateMetrics(); renderBars();
+  }
+  running = false;
+}
+
+function resetAll() {
+  running = false;
+  results = [];
+  document.getElementById('xmlCard').style.display = 'none';
+  renderTable(); updateMetrics(); renderBars();
+  document.getElementById('progFill').style.width = '0%';
+}
+
+function showXml() {
+  if (!results.length) { alert('Run tests first!'); return; }
+  const card = document.getElementById('xmlCard');
+  card.style.display = 'block';
+  const pass = results.filter(r=>r.status==='pass'||r.status==='healed').length;
+  const fail = results.filter(r=>r.status==='fail').length;
+  const time = results.reduce((s,r)=>s+r.time,0);
+
+  let xml = `<span class="xml-tag">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>\n`;
+  xml += `<span class="xml-tag">&lt;testsuites</span> <span class="xml-attr">tests</span>=<span class="xml-val">"${results.length}"</span> <span class="xml-attr">failures</span>=<span class="xml-val">"${fail}"</span> <span class="xml-attr">time</span>=<span class="xml-val">"${time.toFixed(2)}"</span><span class="xml-tag">&gt;</span>\n`;
+
+  FRAMEWORKS.forEach(f => {
+    const ft = results.filter(r=>r.fw===f.id);
+    if (!ft.length) return;
+    const ff = ft.filter(r=>r.status==='fail').length;
+    const tt = ft.reduce((s,r)=>s+r.time,0);
+    xml += `  <span class="xml-tag">&lt;testsuite</span> <span class="xml-attr">name</span>=<span class="xml-val">"${f.name}"</span> <span class="xml-attr">tests</span>=<span class="xml-val">"${ft.length}"</span> <span class="xml-attr">failures</span>=<span class="xml-val">"${ff}"</span> <span class="xml-attr">time</span>=<span class="xml-val">"${tt.toFixed(2)}"</span><span class="xml-tag">&gt;</span>\n`;
+    ft.forEach(t => {
+      xml += `    <span class="xml-tag">&lt;testcase</span> <span class="xml-attr">name</span>=<span class="xml-val">"${t.name}"</span> <span class="xml-attr">time</span>=<span class="xml-val">"${t.time.toFixed(2)}"</span>`;
+      if (t.status === 'fail') {
+        xml += `<span class="xml-tag">&gt;</span>\n      <span class="xml-err">&lt;failure message="Element not found: ${t.loc}"/&gt;</span>\n    <span class="xml-tag">&lt;/testcase&gt;</span>\n`;
+      } else if (t.status === 'healed') {
+        xml += `<span class="xml-tag">&gt;</span>\n      <span class="xml-tag">&lt;system-out&gt;</span>HEALED: ${t.loc} → ${t.healTo} (${(t.conf*100).toFixed(0)}%)<span class="xml-tag">&lt;/system-out&gt;</span>\n    <span class="xml-tag">&lt;/testcase&gt;</span>\n`;
+      } else {
+        xml += `<span class="xml-tag">/&gt;</span>\n`;
+      }
+    });
+    xml += `  <span class="xml-tag">&lt;/testsuite&gt;</span>\n`;
+  });
+  xml += `<span class="xml-tag">&lt;/testsuites&gt;</span>`;
+  document.getElementById('xmlBox').innerHTML = xml;
+  card.scrollIntoView({behavior:'smooth'});
+}
+
+// Init
+renderTable(); updateMetrics(); renderBars();
+</script>
+</body>
+</html>

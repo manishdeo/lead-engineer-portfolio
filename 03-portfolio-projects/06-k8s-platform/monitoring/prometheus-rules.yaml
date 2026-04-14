@@ -1,0 +1,100 @@
+# PrometheusRule: SLO-based alerting per tenant
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: tenant-slo-alerts
+  namespace: monitoring
+spec:
+  groups:
+    - name: tenant-slos
+      rules:
+        # Error rate SLO: < 0.1% errors over 5 minutes
+        - alert: TenantHighErrorRate
+          expr: |
+            (
+              sum(rate(istio_requests_total{response_code=~"5.*"}[5m])) by (destination_workload_namespace)
+              /
+              sum(rate(istio_requests_total[5m])) by (destination_workload_namespace)
+            ) > 0.001
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High error rate in namespace {{ $labels.destination_workload_namespace }}"
+            description: "Error rate is {{ $value | humanizePercentage }} (SLO: 99.9%)"
+
+        # Latency SLO: p99 < 500ms
+        - alert: TenantHighLatency
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(istio_request_duration_milliseconds_bucket[5m])) by (le, destination_workload_namespace)
+            ) > 500
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High p99 latency in {{ $labels.destination_workload_namespace }}"
+
+        # Resource quota approaching limit
+        - alert: TenantQuotaNearLimit
+          expr: |
+            kube_resourcequota{type="used"} / kube_resourcequota{type="hard"} > 0.85
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Namespace {{ $labels.namespace }} using >85% of {{ $labels.resource }} quota"
+---
+# Grafana dashboard ConfigMap (auto-provisioned)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tenant-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  tenant-overview.json: |
+    {
+      "dashboard": {
+        "title": "Multi-Tenant Overview",
+        "templating": {
+          "list": [{
+            "name": "namespace",
+            "type": "query",
+            "query": "label_values(kube_namespace_labels{label_tenant!=\"\"}, namespace)",
+            "refresh": 2
+          }]
+        },
+        "panels": [
+          {
+            "title": "Request Rate by Tenant",
+            "type": "timeseries",
+            "targets": [{
+              "expr": "sum(rate(istio_requests_total{destination_workload_namespace=~\"tenant-.*\"}[5m])) by (destination_workload_namespace)"
+            }]
+          },
+          {
+            "title": "Error Rate by Tenant",
+            "type": "timeseries",
+            "targets": [{
+              "expr": "sum(rate(istio_requests_total{response_code=~\"5.*\",destination_workload_namespace=~\"tenant-.*\"}[5m])) by (destination_workload_namespace) / sum(rate(istio_requests_total{destination_workload_namespace=~\"tenant-.*\"}[5m])) by (destination_workload_namespace)"
+            }]
+          },
+          {
+            "title": "CPU Usage vs Quota",
+            "type": "gauge",
+            "targets": [{
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\"}[5m])) / sum(kube_resourcequota{namespace=~\"$namespace\",resource=\"requests.cpu\",type=\"hard\"})"
+            }]
+          },
+          {
+            "title": "P99 Latency",
+            "type": "stat",
+            "targets": [{
+              "expr": "histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket{destination_workload_namespace=~\"$namespace\"}[5m])) by (le))"
+            }]
+          }
+        ]
+      }
+    }

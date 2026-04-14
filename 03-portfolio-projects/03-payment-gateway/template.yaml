@@ -1,0 +1,173 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Cloud-Native Payment Gateway
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref PaymentTable
+    Tracing: Active
+
+Resources:
+  # --- API Gateway ---
+  PaymentApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Auth:
+        ApiKeyRequired: true
+
+  # --- Lambda Functions ---
+  AuthorizeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: functions/authorize/src/index.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentTable
+      Events:
+        Authorize:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PaymentApi
+            Path: /payments/authorize
+            Method: POST
+
+  CaptureFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: functions/capture/src/index.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentTable
+      Events:
+        Capture:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PaymentApi
+            Path: /payments/{paymentId}/capture
+            Method: POST
+
+  RefundFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: functions/refund/src/index.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentTable
+      Events:
+        Refund:
+          Type: Api
+          Properties:
+            RestApiId: !Ref PaymentApi
+            Path: /payments/{paymentId}/refund
+            Method: POST
+
+  WebhookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: functions/webhook/src/index.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentTable
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt WebhookQueue.Arn
+            BatchSize: 1
+
+  ReconciliationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: functions/reconciliation/src/index.handler
+      Timeout: 900
+      MemorySize: 512
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentTable
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 2 * * ? *)
+            Description: Daily reconciliation at 2 AM UTC
+
+  # --- DynamoDB ---
+  PaymentTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: PaymentGateway
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  # --- SQS ---
+  WebhookQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: payment-webhooks
+      VisibilityTimeout: 60
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt WebhookDLQ.Arn
+        maxReceiveCount: 3
+
+  WebhookDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: payment-webhooks-dlq
+      MessageRetentionPeriod: 1209600  # 14 days
+
+  # --- CloudWatch Alarm for DLQ ---
+  DLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: WebhookDLQMessages
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt WebhookDLQ.QueueName
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+
+Outputs:
+  ApiUrl:
+    Value: !Sub "https://${PaymentApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+  TableName:
+    Value: !Ref PaymentTable

@@ -1,0 +1,29 @@
+{
+  "name": "cloud-native-payment-gateway",
+  "version": "1.0.0",
+  "description": "Serverless payment gateway with AWS Lambda, DynamoDB, Step Functions",
+  "private": true,
+  "scripts": {
+    "test": "jest --coverage",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration",
+    "lint": "eslint functions/ shared/",
+    "deploy": "sam build && sam deploy",
+    "local": "sam local start-api"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.500.0",
+    "@aws-sdk/lib-dynamodb": "^3.500.0",
+    "@aws-sdk/client-sqs": "^3.500.0",
+    "@aws-sdk/client-sfn": "^3.500.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "eslint": "^8.56.0",
+    "@types/aws-lambda": "^8.10.131"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

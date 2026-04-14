@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.tenant.name }}-app
+  namespace: tenant-{{ .Values.tenant.name }}
+  labels:
+    app: {{ .Values.tenant.name }}-app
+    tenant: {{ .Values.tenant.name }}
+spec:
+  replicas: {{ .Values.app.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.tenant.name }}-app
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.tenant.name }}-app
+        tenant: {{ .Values.tenant.name }}
+    spec:
+      tolerations:
+        - key: tenant-workload
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+      nodeSelector:
+        role: tenant
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: {{ .Values.app.image }}
+          ports:
+            - containerPort: {{ .Values.app.port }}
+          resources:
+            requests:
+              cpu: {{ .Values.app.resources.requests.cpu }}
+              memory: {{ .Values.app.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.app.resources.limits.cpu }}
+              memory: {{ .Values.app.resources.limits.memory }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.app.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.app.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.tenant.name }}-app
+  namespace: tenant-{{ .Values.tenant.name }}
+spec:
+  selector:
+    app: {{ .Values.tenant.name }}-app
+  ports:
+    - port: 80
+      targetPort: {{ .Values.app.port }}
+---
+{{- if .Values.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.tenant.name }}-app
+  namespace: tenant-{{ .Values.tenant.name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.tenant.name }}-app
+  minReplicas: {{ .Values.hpa.minReplicas }}
+  maxReplicas: {{ .Values.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.targetCPU }}
+{{- end }}

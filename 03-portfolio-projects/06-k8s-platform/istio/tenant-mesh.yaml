@@ -1,0 +1,88 @@
+# Strict mTLS for all tenant namespaces
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: istio-system
+spec:
+  mtls:
+    mode: STRICT
+---
+# Gateway for tenant traffic
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: tenant-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*.maplehub.dev"
+---
+# Example: VirtualService with canary traffic splitting
+# Each tenant gets a VirtualService routing *.maplehub.dev/<tenant>
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: tenant-alpha-vs
+  namespace: tenant-alpha
+spec:
+  hosts:
+    - "alpha.maplehub.dev"
+  gateways:
+    - istio-system/tenant-gateway
+  http:
+    - route:
+        - destination:
+            host: alpha-app
+            subset: stable
+          weight: 90
+        - destination:
+            host: alpha-app
+            subset: canary
+          weight: 10
+      fault:
+        delay:
+          percentage:
+            value: 0.1
+          fixedDelay: 2s
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: alpha-app
+  namespace: tenant-alpha
+spec:
+  host: alpha-app
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        h2UpgradePolicy: DEFAULT
+        maxRequestsPerConnection: 10
+  subsets:
+    - name: stable
+      labels:
+        version: stable
+    - name: canary
+      labels:
+        version: canary
+---
+# AuthorizationPolicy — only allow traffic from same namespace
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: tenant-isolation
+  namespace: tenant-alpha
+spec:
+  rules:
+    - from:
+        - source:
+            namespaces: ["tenant-alpha", "istio-system"]

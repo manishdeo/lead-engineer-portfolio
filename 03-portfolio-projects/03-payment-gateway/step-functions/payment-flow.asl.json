@@ -1,0 +1,101 @@
+{
+  "Comment": "Payment Processing Orchestration — Authorize → Capture → Notify",
+  "StartAt": "AuthorizePayment",
+  "States": {
+    "AuthorizePayment": {
+      "Type": "Task",
+      "Resource": "${AuthorizeFunctionArn}",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "PaymentFailed",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "WaitForCaptureWindow"
+    },
+
+    "WaitForCaptureWindow": {
+      "Type": "Wait",
+      "Seconds": 5,
+      "Comment": "In production: wait for merchant to trigger capture, or auto-capture after delay",
+      "Next": "CapturePayment"
+    },
+
+    "CapturePayment": {
+      "Type": "Task",
+      "Resource": "${CaptureFunctionArn}",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "IntervalSeconds": 5,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "RefundAuthorization",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "NotifyMerchant"
+    },
+
+    "NotifyMerchant": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sqs:sendMessage",
+      "Parameters": {
+        "QueueUrl": "${WebhookQueueUrl}",
+        "MessageBody": {
+          "paymentId.$": "$.paymentId",
+          "merchantId.$": "$.merchantId",
+          "eventType": "payment.captured",
+          "data.$": "$"
+        }
+      },
+      "Next": "PaymentSucceeded"
+    },
+
+    "PaymentSucceeded": {
+      "Type": "Succeed"
+    },
+
+    "RefundAuthorization": {
+      "Type": "Task",
+      "Resource": "${RefundFunctionArn}",
+      "Comment": "Compensation: refund if capture fails",
+      "Next": "NotifyFailure"
+    },
+
+    "NotifyFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sqs:sendMessage",
+      "Parameters": {
+        "QueueUrl": "${WebhookQueueUrl}",
+        "MessageBody": {
+          "paymentId.$": "$.paymentId",
+          "merchantId.$": "$.merchantId",
+          "eventType": "payment.failed",
+          "error.$": "$.error"
+        }
+      },
+      "Next": "PaymentFailed"
+    },
+
+    "PaymentFailed": {
+      "Type": "Fail",
+      "Error": "PaymentProcessingFailed",
+      "Cause": "Payment could not be processed"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: isolate-tenant-a
+  namespace: tenant-a
+spec:
+  podSelector: {} # Applies to all pods in the 'tenant-a' namespace
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    # Only allow traffic from other pods within the same namespace
+    - namespaceSelector:
+        matchLabels:
+          name: tenant-a
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tenant-a-admin
+  namespace: tenant-a
+subjects:
+- kind: Group
+  name: "tenant-a-developers"
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: edit
+  apiGroup: rbac.authorization.k8s.io
+---
+# Resource Quota to ensure fair resource allocation among tenants
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: compute-quota
+  namespace: tenant-a
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    pods: "20"

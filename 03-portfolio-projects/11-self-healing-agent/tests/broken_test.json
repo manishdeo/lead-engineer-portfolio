@@ -1,0 +1,33 @@
+{
+  "name": "Login Flow — BROKEN Locators (Self-Healing Test)",
+  "description": "Uses intentionally wrong locators to trigger the healing pipeline",
+  "steps": [
+    {
+      "action": "navigate",
+      "locator": "https://practicetestautomation.com/practice-test-login/",
+      "intent": "Navigate to the login page"
+    },
+    {
+      "action": "fill",
+      "locator": "#user-email-input",
+      "value": "student",
+      "intent": "Enter username into the username input field"
+    },
+    {
+      "action": "fill",
+      "locator": "#pass-field",
+      "value": "Password123",
+      "intent": "Enter password into the password input field"
+    },
+    {
+      "action": "click",
+      "locator": "#login-btn",
+      "intent": "Click the login/submit button to submit credentials"
+    },
+    {
+      "action": "assert_visible",
+      "locator": "h1.dashboard-title",
+      "intent": "Verify the dashboard or success page loaded after login"
+    }
+  ]
+}
